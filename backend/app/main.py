@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 import logging
 
 from app.config import get_settings
-from app.api import alerts, analysis, portfolio, backtest, content, community
+from app.api import alerts, analysis, portfolio, backtest, content, community, risk
 from app.websocket.server import websocket_manager
 from app.utils.logger import setup_logger
 
@@ -42,6 +42,7 @@ app.include_router(portfolio.router, prefix="/api/portfolios", tags=["Portfolio"
 app.include_router(backtest.router, prefix="/api/backtest", tags=["Backtesting"])
 app.include_router(content.router, prefix="/api/content", tags=["Content"])
 app.include_router(community.router, prefix="/api/community", tags=["Community"])
+app.include_router(risk.router, prefix="/api/risk", tags=["Risk"])
 
 
 @app.get("/")
