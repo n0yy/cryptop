@@ -4,8 +4,9 @@ from typing import Optional, List
 
 from app.models.portfolio import Portfolio
 from app.models.position import Position
-from app.schemas.portfolio_schema import PortfolioCreate, PositionCreate
+from app.schemas.portfolio_schema import PortfolioCreate, PositionCreate, PortfolioAnalysisResponse
 from app.portfolio.manager import PortfolioManager
+from app.services.risk_management_service import RiskManagementService
 from app.utils.logger import logger
 
 
@@ -61,7 +62,11 @@ class PortfolioService:
                     "positionId": p.id,
                     "symbol": p.symbol,
                     "quantity": float(p.quantity),
-                    "entryPrice": float(p.entry_price)
+                    "entryPrice": float(p.entry_price),
+                    "stopLossPrice": float(p.stop_loss_price) if p.stop_loss_price else None,
+                    "takeProfitPrice": float(p.take_profit_price) if p.take_profit_price else None,
+                    "leverage": float(p.leverage) if p.leverage else None,
+                    "collateral": float(p.collateral) if p.collateral else None
                 }
                 for p in positions
             ],
@@ -90,7 +95,11 @@ class PortfolioService:
             symbol=position_data.symbol,
             quantity=position_data.quantity,
             entry_price=position_data.entryPrice,
-            entry_date=position_data.entryDate
+            entry_date=position_data.entryDate,
+            stop_loss_price=position_data.stopLossPrice,
+            take_profit_price=position_data.takeProfitPrice,
+            leverage=position_data.leverage,
+            collateral=position_data.collateral
         )
         
         self.db.add(position)
@@ -105,7 +114,11 @@ class PortfolioService:
             "symbol": position.symbol,
             "quantity": float(position.quantity),
             "entryPrice": float(position.entry_price),
-            "entryDate": position.entry_date.isoformat()
+            "entryDate": position.entry_date.isoformat(),
+            "stopLossPrice": float(position.stop_loss_price) if position.stop_loss_price else None,
+            "takeProfitPrice": float(position.take_profit_price) if position.take_profit_price else None,
+            "leverage": float(position.leverage) if position.leverage else None,
+            "collateral": float(position.collateral) if position.collateral else None
         }
     
     async def get_portfolio_analysis(self, portfolio_id: int) -> Optional[dict]:
@@ -115,6 +128,20 @@ class PortfolioService:
             return None
         
         analysis = await self.manager.analyze_portfolio(portfolio_id)
+        
+        # Integrate correlation risk analysis
+        symbols = [pos["symbol"] for pos in portfolio["positions"]]
+        if symbols:
+            # TODO: Fetch real historical data from market data service or integration
+            # For now, use mock data for demonstration
+            import numpy as np
+            historical_data = {sym: [100 + i*2 + np.random.normal(0, 5) for i in range(30)] for sym in symbols}
+            
+            risk_service = RiskManagementService()
+            corr_analysis = risk_service.perform_correlation_analysis(symbols, historical_data)
+            
+            # Add to analysis (note: schema may need update to include correlation_analysis)
+            analysis["correlation_analysis"] = corr_analysis
         
         return analysis
     
