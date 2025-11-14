@@ -10,8 +10,16 @@ class RiskManagementService:
 
     def calculate_position_size(self, risk_tolerance: str, portfolio_value: float) -> float:
         """Calculate recommended position size based on risk tolerance and portfolio value."""
-        # Implementation in next task
-        raise NotImplementedError("Position size calculation not implemented yet")
+        risk_tolerance = risk_tolerance.upper()
+        if risk_tolerance == 'LOW':
+            risk_factor = 0.01  # 1% of portfolio
+        elif risk_tolerance == 'MEDIUM':
+            risk_factor = 0.02  # 2% of portfolio
+        elif risk_tolerance == 'HIGH':
+            risk_factor = 0.05  # 5% of portfolio
+        else:
+            raise ValueError(f"Invalid risk tolerance: {risk_tolerance}. Must be LOW, MEDIUM, or HIGH.")
+        return portfolio_value * risk_factor
 
     def calculate_liquidation_price(self, entry_price: float, quantity: float, leverage: float, collateral: float) -> float:
         """Calculate liquidation price for a leveraged position."""
