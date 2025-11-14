@@ -22,9 +22,15 @@ class RiskManagementService:
         return portfolio_value * risk_factor
 
     def calculate_liquidation_price(self, entry_price: float, quantity: float, leverage: float, collateral: float) -> float:
-        """Calculate liquidation price for a leveraged position."""
-        # Implementation in next task
-        raise NotImplementedError("Liquidation price calculation not implemented yet")
+        """Calculate liquidation price for a leveraged position (assuming long position)."""
+        # Simplified formula: liquidation occurs when loss equals collateral
+        # Loss = quantity * (entry_price - current_price)
+        # Set loss = collateral => current_price = entry_price - collateral / quantity
+        # Leverage is provided for context but not directly used, as collateral determines the margin
+        # In practice, collateral ≈ (quantity * entry_price) / leverage
+        if quantity <= 0:
+            raise ValueError("Quantity must be positive for long position.")
+        return entry_price - (collateral / quantity)
 
     def perform_correlation_analysis(self, symbols: List[str], historical_data: Optional[Dict[str, List[float]]] = None) -> Dict[str, Any]:
         """Perform correlation risk analysis on asset symbols."""
