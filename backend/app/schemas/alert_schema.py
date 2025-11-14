@@ -12,6 +12,9 @@ class AlertCondition(str, Enum):
     RSI_ABOVE = "RSI_ABOVE"
     RSI_BELOW = "RSI_BELOW"
     MACD_CROSS = "MACD_CROSS"
+    STOP_LOSS = "STOP_LOSS"
+    TAKE_PROFIT = "TAKE_PROFIT"
+    DRAWDOWN_THRESHOLD = "DRAWDOWN_THRESHOLD"
 
 
 class AlertStatus(str, Enum):

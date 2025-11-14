@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 import logging
 
 from app.config import get_settings
-from app.api import alerts, analysis, portfolio, backtest, content, community
+from app.api import alerts, analysis, portfolio, backtest, content, community, risk
 from app.websocket.server import websocket_manager
 from app.utils.logger import setup_logger
 
@@ -42,6 +42,7 @@ app.include_router(portfolio.router, prefix="/api/portfolios", tags=["Portfolio"
 app.include_router(backtest.router, prefix="/api/backtest", tags=["Backtesting"])
 app.include_router(content.router, prefix="/api/content", tags=["Content"])
 app.include_router(community.router, prefix="/api/community", tags=["Community"])
+app.include_router(risk.router, prefix="/api/risk", tags=["Risk"])
 
 
 @app.get("/")
@@ -98,3 +99,25 @@ if __name__ == "__main__":
         port=8000,
         reload=settings.ENVIRONMENT == "development"
     )
+
+# Celery integration
+if settings.ENVIRONMENT != "production":
+    from app.celery_app import celery_app
+    celery_app.autodiscover_tasks()
+
+# Celery worker and beat startup (for development)
+if settings.ENVIRONMENT == "development":
+    import subprocess
+    import threading
+    
+    def start_celery_worker():
+        subprocess.run(["celery", "-A", "app.celery_app.celery_app", "worker", "--loglevel=info"])
+    
+    def start_celery_beat():
+        subprocess.run(["celery", "-A", "app.celery_app.celery_app", "beat", "--loglevel=info"])
+    
+    worker_thread = threading.Thread(target=start_celery_worker)
+    beat_thread = threading.Thread(target=start_celery_beat)
+    worker_thread.start()
+    beat_thread.start()
+EOF'

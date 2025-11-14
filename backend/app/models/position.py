@@ -15,8 +15,13 @@ class Position(Base):
     entry_date = Column(TIMESTAMP, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+    stop_loss_price = Column(DECIMAL(20, 8), nullable=True)
+    take_profit_price = Column(DECIMAL(20, 8), nullable=True)
+    leverage = Column(DECIMAL(20, 8), nullable=True)
+    collateral = Column(DECIMAL(20, 8), nullable=True)
     
     portfolio = relationship("Portfolio", back_populates="positions")
     
     def __repr__(self):
         return f"<Position(id={self.id}, symbol={self.symbol}, quantity={self.quantity})>"
+
