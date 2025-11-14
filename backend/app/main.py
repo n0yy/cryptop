@@ -99,3 +99,8 @@ if __name__ == "__main__":
         port=8000,
         reload=settings.ENVIRONMENT == "development"
     )
+
+# Celery integration
+if settings.ENVIRONMENT != "production":
+    from app.celery_app import celery_app
+    celery_app.autodiscover_tasks()
