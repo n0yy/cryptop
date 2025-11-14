@@ -160,3 +160,58 @@ class AlertService:
         # TODO: Implement notification sending based on alert.channels
         
         return True
+
+    async def check_and_trigger_all_risk_alerts(self):
+        """Periodically check and trigger risk-related alerts."""
+        from sqlalchemy import select
+        from app.models.alert import Alert
+        from app.integrations.coingecko import CoinGeckoClient
+        from app.services.portfolio_service import PortfolioService
+        
+        query = select(Alert).where(
+            Alert.status == "ACTIVE",
+            Alert.condition.in_(["STOP_LOSS", "TAKE_PROFIT", "DRAWDOWN_THRESHOLD"])
+        )
+        result = await self.db.execute(query)
+        alerts = result.scalars().all()
+        
+        coingecko = CoinGeckoClient()
+        portfolio_service = PortfolioService(self.db)
+        
+        triggered_count = 0
+        for alert in alerts:
+            condition_met = False
+            if alert.condition in ["STOP_LOSS", "TAKE_PROFIT"]:
+                current_price = await coingecko.get_current_price(alert.symbol)
+                if current_price is None:
+                    continue
+                if alert.condition == "STOP_LOSS" and current_price <= alert.threshold:
+                    condition_met = True
+                elif alert.condition == "TAKE_PROFIT" and current_price >= alert.threshold:
+                    condition_met = True
+            elif alert.condition == "DRAWDOWN_THRESHOLD":
+                user_portfolios = await portfolio_service.get_user_portfolios(alert.user_id)
+                if not user_portfolios:
+                    continue
+                total_entry_value = 0.0
+                total_current_value = 0.0
+                for user_port in user_portfolios:
+                    portfolio_id = user_port["portfolioId"]
+                    # Calculate entry value from positions
+                    portfolio = await portfolio_service.get_portfolio(portfolio_id)
+                    if portfolio and "positions" in portfolio:
+                        for pos in portfolio["positions"]:
+                            total_entry_value += pos["quantity"] * pos["entryPrice"]
+                    # Get current value from analysis
+                    analysis = await portfolio_service.get_portfolio_analysis(portfolio_id)
+                    if analysis and "totalValue" in analysis:
+                        total_current_value += analysis["totalValue"]
+                if total_entry_value > 0:
+                    drawdown_percent = ((total_current_value - total_entry_value) / total_entry_value) * 100
+                    if drawdown_percent <= -alert.threshold:
+                        condition_met = True
+            if condition_met:
+                if await self.trigger_alert(alert.id):
+                    triggered_count += 1
+        logger.info(f"Risk check completed. Triggered {triggered_count} alerts.")
+        return triggered_count
