@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Dict, Optional
 import numpy as np
+import asyncio
 
 from app.models.portfolio import Portfolio
 from app.models.position import Position
