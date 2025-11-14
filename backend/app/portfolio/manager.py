@@ -55,7 +55,7 @@ class PortfolioManager:
                 current = allocation.get(symbol, 0)
                 allocation_deviation[symbol] = current - target
             
-            risk_metrics = self._calculate_risk_metrics(positions, total_value)
+            risk_metrics = await self._calculate_risk_metrics(positions, total_value)
             
             rebalancing_needed = any(abs(dev) > 0.05 for dev in allocation_deviation.values())
             
