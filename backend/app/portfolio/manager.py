@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Dict, Optional
 import numpy as np
+import asyncio
 
 from app.models.portfolio import Portfolio
 from app.models.position import Position
@@ -54,7 +55,7 @@ class PortfolioManager:
                 current = allocation.get(symbol, 0)
                 allocation_deviation[symbol] = current - target
             
-            risk_metrics = self._calculate_risk_metrics(positions, total_value)
+            risk_metrics = await self._calculate_risk_metrics(positions, total_value)
             
             rebalancing_needed = any(abs(dev) > 0.05 for dev in allocation_deviation.values())
             
