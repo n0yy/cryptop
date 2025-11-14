@@ -63,3 +63,5 @@ def get_settings() -> Settings:
 
 CELERY_BROKER_URL: str = Field(default="redis://localhost:6379/0")
 CELERY_RESULT_BACKEND: str = Field(default="redis://localhost:6379/0")
+
+

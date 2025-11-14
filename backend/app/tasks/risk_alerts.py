@@ -23,6 +23,4 @@ def check_risk_alerts(self):
         return result
     finally:
         loop.close()
-
-# Schedule this task to run every 5 minutes (adjust as needed)
-# This can be configured in Celery Beat schedule
+EOF'

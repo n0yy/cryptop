@@ -104,3 +104,20 @@ if __name__ == "__main__":
 if settings.ENVIRONMENT != "production":
     from app.celery_app import celery_app
     celery_app.autodiscover_tasks()
+
+# Celery worker and beat startup (for development)
+if settings.ENVIRONMENT == "development":
+    import subprocess
+    import threading
+    
+    def start_celery_worker():
+        subprocess.run(["celery", "-A", "app.celery_app.celery_app", "worker", "--loglevel=info"])
+    
+    def start_celery_beat():
+        subprocess.run(["celery", "-A", "app.celery_app.celery_app", "beat", "--loglevel=info"])
+    
+    worker_thread = threading.Thread(target=start_celery_worker)
+    beat_thread = threading.Thread(target=start_celery_beat)
+    worker_thread.start()
+    beat_thread.start()
+EOF'

@@ -17,3 +17,11 @@ celery_app.conf.update(
     timezone='UTC',
     enable_utc=True,
 )
+
+# Celery Beat schedule for risk alerts check every 5 minutes
+celery_app.conf.beat_schedule = {
+    'check-risk-alerts-every-5-minutes': {
+        'task': 'app.tasks.risk_alerts.check_risk_alerts',
+        'schedule': 300.0,  # 5 minutes in seconds
+    },
+}
