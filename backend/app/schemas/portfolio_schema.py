@@ -34,6 +34,10 @@ class PositionCreate(BaseModel):
     quantity: float = Field(..., gt=0)
     entryPrice: float = Field(..., gt=0)
     entryDate: datetime
+    stopLossPrice: Optional[float] = None
+    takeProfitPrice: Optional[float] = None
+    leverage: Optional[float] = None
+    collateral: Optional[float] = None
 
 
 class PositionResponse(BaseModel):
@@ -46,6 +50,10 @@ class PositionResponse(BaseModel):
     currentValue: Optional[float] = None
     pnl: Optional[float] = None
     pnlPercent: Optional[float] = None
+    stopLossPrice: Optional[float] = None
+    takeProfitPrice: Optional[float] = None
+    leverage: Optional[float] = None
+    collateral: Optional[float] = None
     
     class Config:
         from_attributes = True
@@ -60,3 +68,4 @@ class PortfolioAnalysisResponse(BaseModel):
     riskMetrics: Dict[str, float]
     rebalancingNeeded: bool
     alerts: List[str] = Field(default_factory=list)
+
