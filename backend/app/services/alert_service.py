@@ -1,10 +1,16 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, update
 from typing import Optional, List
 from datetime import datetime
 
+import json
+
 from app.models.alert import Alert
+from app.models.position import Position
+from app.models.portfolio import Portfolio
 from app.schemas.alert_schema import AlertCreate, AlertUpdate
+from app.integrations.coingecko import CoinGeckoClient
+from app.services.portfolio_service import PortfolioService
 from app.utils.logger import logger
 
 
@@ -170,7 +176,7 @@ class AlertService:
         
         query = select(Alert).where(
             Alert.status == "ACTIVE",
-            Alert.condition.in_(["STOP_LOSS", "TAKE_PROFIT", "DRAWDOWN_THRESHOLD"])
+            Alert.condition.in_( ["STOP_LOSS", "TAKE_PROFIT", "DRAWDOWN_THRESHOLD"])
         )
         result = await self.db.execute(query)
         alerts = result.scalars().all()
@@ -181,14 +187,50 @@ class AlertService:
         triggered_count = 0
         for alert in alerts:
             condition_met = False
+            execution_details = None
             if alert.condition in ["STOP_LOSS", "TAKE_PROFIT"]:
                 current_price = await coingecko.get_current_price(alert.symbol)
                 if current_price is None:
                     continue
                 if alert.condition == "STOP_LOSS" and current_price <= alert.threshold:
                     condition_met = True
+                    action = "STOP_LOSS"
                 elif alert.condition == "TAKE_PROFIT" and current_price >= alert.threshold:
                     condition_met = True
+                    action = "TAKE_PROFIT"
+                
+                if condition_met:
+                    # Find and close the corresponding position
+                    pos_query = select(Position).join(Portfolio).where(
+                        and_(
+                            Portfolio.user_id == alert.user_id,
+                            Position.symbol == alert.symbol,
+                            Position.quantity > 0
+                        )
+                    )
+                    pos_result = await self.db.execute(pos_query)
+                    positions = pos_result.scalars().all()
+                    
+                    if positions:
+                        closed_positions = []
+                        for position in positions:
+                            old_quantity = position.quantity
+                            position.quantity = 0
+                            closed_positions.append({
+                                "position_id": position.id,
+                                "old_quantity": float(old_quantity),
+                                "closed_at": datetime.utcnow().isoformat()
+                            })
+                            logger.info(f"Executed {action} for position {position.id} (symbol: {alert.symbol}) - closed quantity from {old_quantity} to 0")
+                        
+                        await self.db.commit()
+                        
+                        execution_details = {
+                            "action": action,
+                            "current_price": float(current_price),
+                            "threshold": float(alert.threshold),
+                            "closed_positions": closed_positions
+                        }
             elif alert.condition == "DRAWDOWN_THRESHOLD":
                 user_portfolios = await portfolio_service.get_user_portfolios(alert.user_id)
                 if not user_portfolios:
@@ -210,8 +252,21 @@ class AlertService:
                     drawdown_percent = ((total_current_value - total_entry_value) / total_entry_value) * 100
                     if drawdown_percent <= -alert.threshold:
                         condition_met = True
+                        execution_details = {
+                            "action": "DRAWDOWN_ALERT",
+                            "drawdown_percent": round(drawdown_percent, 2),
+                            "threshold": float(alert.threshold)
+                        }
+            
             if condition_met:
+                # Update alert with execution details in metadata
+                current_metadata = json.loads(alert.metadata) if alert.metadata else {}
+                current_metadata["execution_details"] = execution_details
+                alert.metadata = json.dumps(current_metadata)
+                
                 if await self.trigger_alert(alert.id):
+                    await self.db.commit()  # Commit metadata update
                     triggered_count += 1
         logger.info(f"Risk check completed. Triggered {triggered_count} alerts.")
         return triggered_count
+EOF'
