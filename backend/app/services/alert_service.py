@@ -138,3 +138,25 @@ class AlertService:
         logger.info(f"Deleted alert {alert_id}")
         
         return True
+
+    async def trigger_alert(self, alert_id: int) -> bool:
+        """Trigger an alert by updating its status and timestamp."""
+        result = await self.db.execute(
+            select(Alert).where(Alert.id == alert_id)
+        )
+        alert = result.scalar_one_or_none()
+        
+        if not alert or alert.status != "ACTIVE":
+            return False
+        
+        alert.status = "TRIGGERED"
+        alert.triggered_at = datetime.utcnow()
+        
+        await self.db.commit()
+        await self.db.refresh(alert)
+        
+        logger.info(f"Triggered alert {alert_id} for user {alert.user_id}")
+        
+        # TODO: Implement notification sending based on alert.channels
+        
+        return True
